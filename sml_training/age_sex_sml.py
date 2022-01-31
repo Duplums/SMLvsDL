@@ -12,9 +12,8 @@ import nibabel
 from copy import deepcopy
 sys.path.extend(["../", ".", "../../", "../../pylearn-mulm"])
 import argparse
-from datasets import OpenBHB, SubOpenBHB
-from datasets import BHB
-from mulm.residualizer import Residualizer
+from datasets.open_bhb import OpenBHB, SubOpenBHB
+from datasets.bhb_10k import BHB
 from dl_training.preprocessing.combat import CombatModel
 import pandas as pd
 from sml_training.sk_trainer import MLTrainer
@@ -91,6 +90,7 @@ def residualize(formula_res: str, formula_full: str, df: pd.DataFrame, train_dat
     all_df = pd.concat(all_df, ignore_index=True)
 
     if type == "linear":
+        from mulm.residualizer import Residualizer
         residualizer = Residualizer(data=all_df, formula_res=formula_res, formula_full=formula_full)
         Zres = residualizer.get_design_mat(all_df)
         train_data_ = residualizer.fit_transform(train_data, Zres[train_index])
@@ -118,6 +118,8 @@ def residualize(formula_res: str, formula_full: str, df: pd.DataFrame, train_dat
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--root", required=True, type=str)
+    parser.add_argument("--saving_dir", required=True, type=str)
     parser.add_argument("--preproc", required=True, choices=["quasi_raw", "vbm"])
     parser.add_argument("--pb", required=True, choices=["age", "sex"])
     parser.add_argument("--model", required=True, choices=["Ridge", "SVR", "SVC", "LogisticRegression",
@@ -129,8 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("--nb_folds", type=int, required=True)
     parser.add_argument("--cv", action="store_true")
     parser.add_argument("--no_reduc", action="store_true")
-    parser.add_argument("--scaler", default="standard", choices=["standard", "zscore", "standard_biased", "none"])
-    parser.add_argument("--mask", default="std", choices=["std", "reduced"])
+    parser.add_argument("--scaler", default="standard", choices=["standard", "zscore", "none"])
     parser.add_argument("--residualize", type=str, choices=["linear", "combat"])
     parser.add_argument("--post_norm", action="store_true")
     parser.add_argument("--red_meth", nargs="+", choices=["UFS", "RFE", "GRP"])
@@ -139,20 +140,19 @@ if __name__ == "__main__":
     parser.add_argument("--test", action="store_true")
 
     args = parser.parse_args()
-    root = '/neurospin/psy_sbox/analyses/201906_schizconnect-vip-prague-bsnip-biodb-icaar-start_assemble-all/data/'
-    saving_dir = os.path.join('/neurospin/psy_sbox/bd261576/checkpoints/regression_age_sex/Benchmark_OpenBHB/',
-                              args.folder)
+    root = args.root
+    saving_dir = args.saving_dir
 
     scorings = {"age": "neg_mean_absolute_error",
                 "sex": "balanced_accuracy"}
-
-    if args.mask == "std":
-        masks = {"vbm": np.load(os.path.join(root, "mask_open-bhb_vbm.npy")),
-                 "quasi_raw": np.load(os.path.join(root, "mask_open-bhb_quasi_raw.npy"))}
-    else:
-        m_vbm = nibabel.load("/neurospin/tmp/psy_sbox/all_studies/derivatives/arrays/mni_cerebrum-gm-mask_1.5mm.nii.gz")
+    try:
+        m_vbm = nibabel.load(os.path.join(root, "mni_cerebrum-gm-mask_1.5mm.nii.gz"))
         m_quasi_raw = nibabel.load(os.path.join(root, "mni_raw_brain-mask_1.5mm.nii.gz"))
-        masks = {"vbm": m_vbm.get_data() != 0, "quasi_raw": m_quasi_raw.get_data() != 0}
+    except FileNotFoundError:
+        raise FileNotFoundError("Brain masks not found. You can find them in /masks directory "
+                                "and mv them to this directory: %s" % args.root)
+
+    masks = {"vbm": m_vbm.get_data() != 0, "quasi_raw": m_quasi_raw.get_data() != 0}
 
     models = {"age": [Ridge, SVR, RandomForestRegressor, ElasticNet],
               "sex": [SVC, LogisticRegression, RandomForestClassifier, SGDClassifier]}
@@ -194,8 +194,6 @@ if __name__ == "__main__":
     db = dbs[scheme]
     if args.scaler == "standard":
         scaler = StandardScaler
-    elif args.scaler == "standard_biased":
-        scaler = StandardScalerBiased
     elif args.scaler == "zscore":
         scaler = Zscore
     else:

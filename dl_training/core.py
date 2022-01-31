@@ -34,7 +34,7 @@ class Base:
     """
     def __init__(self, optimizer_name="Adam", learning_rate=1e-3,
                  loss_name="NLLLoss", metrics=None, use_cuda=False,
-                 pretrained=None, freeze_until_layer=None, load_optimizer=True, use_multi_gpu=True,
+                 pretrained=None, load_optimizer=True, use_multi_gpu=True,
                  **kwargs):
         """ Class instantiation.
 
@@ -137,8 +137,6 @@ class Base:
                             self.logger.warning("The optimizer's weights are not restored ! ")
                 else:
                     self.model.load_state_dict(checkpoint)
-        if freeze_until_layer is not None:
-            freeze_until(self.model, freeze_until_layer)
 
         if use_multi_gpu and torch.cuda.device_count() > 1:
             self.model = DataParallel(self.model)
@@ -146,8 +144,7 @@ class Base:
         self.model = self.model.to(self.device)
 
     def training(self, manager, nb_epochs: int, checkpointdir=None,
-                 fold_index=None, epoch_index=None,
-                 scheduler=None, with_validation=True,
+                 fold_index=None, scheduler=None, with_validation=True,
                  nb_epochs_per_saving=1, exp_name=None, standard_optim=True,
                  gpu_time_profiling=False, **kwargs_train):
         """ Train the model.
@@ -164,15 +161,10 @@ class Base:
         fold_index: int or [int] default None
             the index(es) of the fold(s) to use for the training, default use all the
             available folds.
-        epoch_index: int, default None
-            the iteration where to start the counting from
         scheduler: torch.optim.lr_scheduler, default None
             a scheduler used to reduce the learning rate.
         with_validation: bool, default True
             if set use the validation dataset.
-        with_visualization: bool, default False,
-            whether it uses a visualizer that will plot the losses/metrics/images in a WebApp framework
-            during the training process
         nb_epochs_per_saving: int, default 1,
             the number of epochs after which the model+optimizer's parameters are saved
         exp_name: str, default None
@@ -196,8 +188,6 @@ class Base:
                 folds = [fold_index]
             elif isinstance(fold_index, list):
                 folds = fold_index
-        if epoch_index is None:
-            epoch_index = 0
         init_optim_state = deepcopy(self.optimizer.state_dict())
         init_model_state = deepcopy(self.model.state_dict())
         if scheduler is not None:
@@ -213,12 +203,9 @@ class Base:
                 validation=True,
                 fold_index=fold)
             for epoch in range(nb_epochs):
-                self.notify_observers("before_epoch", epoch=epoch, fold=fold)
-                loss, values = self.train(loader.train, train_visualizer, fold, epoch,
-                                          standard_optim=standard_optim,
-                                          gpu_time_profiling=gpu_time_profiling, **kwargs_train)
+                loss, values = self.train(loader.train, fold, epoch, **kwargs_train)
 
-                train_history.log((fold, epoch+epoch_index), loss=loss, **values)
+                train_history.log((fold, epoch), loss=loss, **values)
                 train_history.summary()
                 if scheduler is not None:
                     scheduler.step()
@@ -231,33 +218,28 @@ class Base:
                         self.logger.info("Directory %s created."%checkpointdir)
                     checkpoint(
                         model=self.model,
-                        epoch=epoch+epoch_index,
+                        epoch=epoch,
                         fold=fold,
                         outdir=checkpointdir,
                         name=exp_name,
                         optimizer=self.optimizer)
                     train_history.save(
                         outdir=checkpointdir,
-                        epoch=epoch+epoch_index,
+                        epoch=epoch,
                         fold=fold)
                 if with_validation:
-                    _, _, _, loss, values = self.test(loader.validation,
-                                                      standard_optim=standard_optim, **kwargs_train)
-                    valid_history.log((fold, epoch+epoch_index), validation_loss=loss, **values)
+                    _, _, _, loss, values = self.test(loader.validation, **kwargs_train)
+                    valid_history.log((fold, epoch), validation_loss=loss, **values)
                     valid_history.summary()
-                    if valid_visualizer is not None:
-                        valid_visualizer.refresh_current_metrics()
                     if checkpointdir is not None and (epoch % nb_epochs_per_saving == 0 or epoch == nb_epochs-1) \
                             and epoch > 0:
                         valid_history.save(
                             outdir=checkpointdir,
-                            epoch=epoch+epoch_index,
+                            epoch=epoch,
                             fold=fold)
-                self.notify_observers("after_epoch", epoch=epoch, fold=fold)
         return train_history, valid_history
 
-    def train(self, loader, visualizer=None, fold=None, epoch=None, standard_optim=True,
-              gpu_time_profiling=False, **kwargs):
+    def train(self, loader,fold=None, epoch=None, **kwargs):
         """ Train the model on the trained data.
 
         Parameters
@@ -278,90 +260,57 @@ class Base:
 
         values = {}
         iteration = 0
-        if gpu_time_profiling:
-            gpu_time_per_batch = []
-        if not standard_optim:
-            loss, values = self.model(iter(loader), pbar=pbar, visualizer=visualizer)
-        else:
-            losses = []
-            y_pred = []
-            y_true = []
-            for dataitem in loader:
-                pbar.update()
-                inputs = dataitem.inputs
-                if isinstance(inputs, torch.Tensor):
-                    inputs = inputs.to(self.device)
-                list_targets = []
-                _targets = []
-                for item in (dataitem.outputs, dataitem.labels):
-                    if item is not None:
-                        _targets.append(item.to(self.device))
-                if len(_targets) == 1:
-                    _targets = _targets[0]
-                list_targets.append(_targets)
-    
-                self.optimizer.zero_grad()
-                if gpu_time_profiling:
-                    start_event = torch.cuda.Event(enable_timing=True)
-                    end_event = torch.cuda.Event(enable_timing=True)
-                    start_event.record()
+        losses = []
+        y_pred = []
+        y_true = []
+        for dataitem in loader:
+            pbar.update()
+            inputs = dataitem.inputs
+            if isinstance(inputs, torch.Tensor):
+                inputs = inputs.to(self.device)
+            list_targets = []
+            _targets = []
+            for item in (dataitem.outputs, dataitem.labels):
+                if item is not None:
+                    _targets.append(item.to(self.device))
+            if len(_targets) == 1:
+                _targets = _targets[0]
+            list_targets.append(_targets)
 
-                outputs = self.model(inputs)
+            self.optimizer.zero_grad()
+            outputs = self.model(inputs)
+            batch_loss = self.loss(outputs, *list_targets)
+            batch_loss.backward()
+            self.optimizer.step()
 
-                if gpu_time_profiling:
-                    end_event.record()
-                    torch.cuda.synchronize()
-                    elapsed_time_ms = start_event.elapsed_time(end_event)
-                    gpu_time_per_batch.append(elapsed_time_ms)
+            losses.append(float(batch_loss))
+            y_pred.extend(outputs.detach().cpu().numpy())
+            y_true.extend(list_targets[0].detach().cpu().numpy())
 
-                batch_loss = self.loss(outputs, *list_targets)
-                batch_loss.backward()
-                self.optimizer.step()
+            aux_losses = (self.model.get_aux_losses() if hasattr(self.model, 'get_aux_losses') else dict())
+            aux_losses.update(self.loss.get_aux_losses() if hasattr(self.loss, 'get_aux_losses') else dict())
 
-                losses.append(float(batch_loss))
-                y_pred.extend(outputs.detach().cpu().numpy())
-                y_true.extend(list_targets[0].detach().cpu().numpy())
-    
-                aux_losses = (self.model.get_aux_losses() if hasattr(self.model, 'get_aux_losses') else dict())
-                aux_losses.update(self.loss.get_aux_losses() if hasattr(self.loss, 'get_aux_losses') else dict())
-    
-                for name, aux_loss in aux_losses.items():
-                    if name not in values:
-                        values[name] = 0
-                    values[name] += float(aux_loss) / nb_batch
-                if iteration % 10 == 0:
-                    if visualizer is not None:
-                        visualizer.refresh_current_metrics()
-                        if hasattr(self.model, "get_current_visuals"):
-                            visuals = self.model.get_current_visuals()
-                            visualizer.display_images(visuals, ncols=3)
-                iteration += 1
-            loss = np.mean(losses)
-            for name, metric in self.metrics.items():
+            for name, aux_loss in aux_losses.items():
                 if name not in values:
                     values[name] = 0
-                values[name] = float(metric(torch.tensor(y_pred), torch.tensor(y_true)))
-
-        if gpu_time_profiling:
-            self.logger.info("GPU Time Statistics over 1 epoch:\n\t- {:.2f} +/- {:.2f} ms calling model(data) per batch"
-                                                              "\n\t- {:.2f} ms total time over 1 epoch ({} batches)".format(
-                np.mean(gpu_time_per_batch), np.std(gpu_time_per_batch), np.sum(gpu_time_per_batch), nb_batch))
+                values[name] += float(aux_loss) / nb_batch
+            iteration += 1
+        loss = np.mean(losses)
+        for name, metric in self.metrics.items():
+            if name not in values:
+                values[name] = 0
+            values[name] = float(metric(torch.tensor(y_pred), torch.tensor(y_true)))
         pbar.close()
         return loss, values
 
-    def testing(self, loader: DataLoader, with_logit=False, predict=False, with_visuals=False,
-                saving_dir=None, exp_name=None, standard_optim=True, **kwargs):
+    def testing(self, loader: DataLoader, saving_dir=None, exp_name=None, **kwargs):
         """ Evaluate the model.
 
         Parameters
         ----------
         loader: a pytorch DataLoader
-        with_logit: bool, default False
-            apply a softmax to the result.
-        predict: bool, default False
-            take the argmax over the channels.
-        with_visuals: bool, default False
-            returns the visuals got from the model
+        saving_dir: str path to the saving directory
+        exp_name: str, name of the experiments that is used to derive the output file name of testing results.
         Returns
         -------
         y: array-like
@@ -375,14 +324,7 @@ class Base:
         values: dict
             the values of the metrics if true data availble.
         """
-        if with_visuals:
-            y, y_true, X, loss, values, visuals = self.test(
-                loader, with_logit=with_logit, predict=predict, with_visuals=with_visuals,
-                standard_optim=standard_optim)
-        else:
-            y, y_true, X, loss, values = self.test(
-                loader, with_logit=with_logit, predict=predict, with_visuals=with_visuals,
-                standard_optim=standard_optim)
+        y, y_true, X, loss, values = self.test(loader)
 
         if saving_dir is not None:
             if not os.path.isdir(saving_dir):
@@ -390,24 +332,16 @@ class Base:
                 self.logger.info("Directory %s created."%saving_dir)
             with open(os.path.join(saving_dir, (exp_name or 'test')+'.pkl'), 'wb') as f:
                 pickle.dump({'y_pred': y, 'y_true': y_true, 'loss': loss, 'metrics': values}, f)
-        
-        if with_visuals:
-            return y, X, y_true, loss, values, visuals
 
         return y, X, y_true, loss, values
 
-    def test(self, loader, with_logit=False, predict=False, with_visuals=False, standard_optim=True):
+    def test(self, loader):
         """ Evaluate the model on the test or validation data.
 
         Parameter
         ---------
         loader: a pytorch Dataset
             the data loader.
-        with_logit: bool, default False
-            apply a softmax to the result.
-        predict: bool, default False
-            take the argmax over the channels.
-
         Returns
         -------
         y: array-like
@@ -431,103 +365,48 @@ class Base:
 
         with torch.no_grad():
             y, y_true, X = [], [], []
-            if not standard_optim:
-                loss, values, y, y_true, X = self.model(iter(loader), pbar=pbar)
-            else:
-                for dataitem in loader:
-                    pbar.update()
-                    inputs = dataitem.inputs
-                    if isinstance(inputs, torch.Tensor):
-                        inputs = inputs.to(self.device)
-                    list_targets = []
-                    targets = []
-                    for item in (dataitem.outputs, dataitem.labels):
-                        if item is not None:
-                            targets.append(item.to(self.device))
-                            y_true.extend(item.cpu().detach().numpy())
-                    if len(targets) == 1:
-                        targets = targets[0]
-                    elif len(targets) == 0:
-                        targets = None
-                    if targets is not None:
-                        list_targets.append(targets)
 
-                    outputs = self.model(inputs)
-                    if with_visuals:
-                        visuals.append(self.model.get_current_visuals())
-                    if len(list_targets) > 0:
-                        batch_loss = self.loss(outputs, *list_targets)
-                        loss += float(batch_loss) / nb_batch
-
-                    y.extend(outputs.cpu().detach().numpy())
-
-                    if isinstance(inputs, torch.Tensor):
-                        X.extend(inputs.cpu().detach().numpy())
-
-                    aux_losses = (self.model.get_aux_losses() if hasattr(self.model, 'get_aux_losses') else dict())
-                    aux_losses.update(self.loss.get_aux_losses() if hasattr(self.loss, 'get_aux_losses') else dict())
-                    for name, aux_loss in aux_losses.items():
-                        name += " on validation set"
-                        if name not in values:
-                            values[name] = 0
-                        values[name] += aux_loss / nb_batch
-                        
-                # Now computes the metrics with (y, y_true)
-                for name, metric in self.metrics.items():
-                    name += " on validation set"
-                    values[name] = metric(torch.tensor(y), torch.tensor(y_true))
-            pbar.close()
-            
-            if len(visuals) > 0:
-                visuals = np.concatenate(visuals, axis=0)
-            try:
-                if with_logit:
-                    y = func.softmax(torch.tensor(y), dim=1).detach().cpu().numpy()
-                if predict:
-                    y = np.argmax(y, axis=1)
-            except Exception as e:
-                print(e)
-        if with_visuals:
-            return y, y_true, X, loss, values, visuals
-        return y, y_true, X, loss, values
-
-    def MC_test(self, loader,  MC=50):
-        """ Evaluate the model on the test or validation data by using a Monte-Carlo sampling.
-
-        Parameter
-        ---------
-        loader: a pytorch Dataset
-            the data loader.
-        MC: int, default 50
-            nb of times to perform a feed-forward per input
-
-        Returns
-        -------
-        y: array-like dims (n_samples, MC, ...) where ... is the dims of the network's output
-            the predicted data.
-        y_true: array-like dims (n_samples, MC, ...) where ... is the dims of the network's output
-            the true data
-        """
-        self.model.eval()
-        nb_batch = len(loader)
-        pbar = tqdm(total=nb_batch, desc="Mini-Batch")
-
-        with torch.no_grad():
-            y, y_true = [], []
             for dataitem in loader:
                 pbar.update()
                 inputs = dataitem.inputs
                 if isinstance(inputs, torch.Tensor):
                     inputs = inputs.to(self.device)
-                current_y, current_y_true = [], []
-                for _ in range(MC):
-                    for item in (dataitem.outputs, dataitem.labels):
-                        if item is not None:
-                            current_y_true.append(item.cpu().detach().numpy())
-                    outputs = self.model(inputs)
-                    current_y.append(outputs.cpu().detach().numpy())
-                y.extend(np.array(current_y).swapaxes(0, 1))
-                y_true.extend(np.array(current_y_true).swapaxes(0, 1))
-        pbar.close()
+                list_targets = []
+                targets = []
+                for item in (dataitem.outputs, dataitem.labels):
+                    if item is not None:
+                        targets.append(item.to(self.device))
+                        y_true.extend(item.cpu().detach().numpy())
+                if len(targets) == 1:
+                    targets = targets[0]
+                elif len(targets) == 0:
+                    targets = None
+                if targets is not None:
+                    list_targets.append(targets)
 
-        return np.array(y), np.array(y_true)
+                outputs = self.model(inputs)
+
+                if len(list_targets) > 0:
+                    batch_loss = self.loss(outputs, *list_targets)
+                    loss += float(batch_loss) / nb_batch
+
+                y.extend(outputs.cpu().detach().numpy())
+
+                if isinstance(inputs, torch.Tensor):
+                    X.extend(inputs.cpu().detach().numpy())
+
+                aux_losses = (self.model.get_aux_losses() if hasattr(self.model, 'get_aux_losses') else dict())
+                aux_losses.update(self.loss.get_aux_losses() if hasattr(self.loss, 'get_aux_losses') else dict())
+                for name, aux_loss in aux_losses.items():
+                    name += " on validation set"
+                    if name not in values:
+                        values[name] = 0
+                    values[name] += aux_loss / nb_batch
+
+                # Now computes the metrics with (y, y_true)
+                for name, metric in self.metrics.items():
+                    name += " on validation set"
+                    values[name] = metric(torch.tensor(y), torch.tensor(y_true))
+            pbar.close()
+
+        return y, y_true, X, loss, values

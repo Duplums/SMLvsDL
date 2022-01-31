@@ -10,7 +10,6 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.preprocessing import StandardScaler
 import torch, logging
 from collections import namedtuple
-from mulm.residualizer import Residualizer
 from dl_training.preprocessing.combat import CombatModel
 import numpy as np
 import pandas as pd
@@ -122,7 +121,6 @@ class OpenBHBDataManager:
         data["labels"] = torch.stack([torch.tensor(sample[1]) for sample in list_samples], dim=0).squeeze().float()
         return DataItem(**data)
 
-    # Only for OpenBHB. For OpenBHB challenge, data residualized should already be computed and available.
     def fit_residualizer(self, splits=None, fold_index=0):
         """
         :param splits: list of splits, must be a train, validation or test split the Residualizer will be applied on
@@ -157,6 +155,7 @@ class OpenBHBDataManager:
             return residualizer, None
 
         elif self.residualize == "linear":
+            from mulm.residualizer import Residualizer
             residualizer = Residualizer(data=all_df, formula_res=self.formula_res, formula_full=self.formula_full)
             Zres = residualizer.get_design_mat(all_df)
             residualizer.fit(train_data, Zres[train_index])

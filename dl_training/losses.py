@@ -19,7 +19,7 @@ import numpy as np
 # Global parameters
 logger = logging.getLogger("dl_training")
 
-class GeneralizedSupervisedNTXenLoss(nn.Module):
+class WeaklySupervisedNTXenLoss(nn.Module):
     """
     This loss is proposed in B. Dufumier, Contrastive Learning with Continuous Proxy Meta-Data for 3D MRI Classification, MICCAI 2021
     """
@@ -41,7 +41,7 @@ class GeneralizedSupervisedNTXenLoss(nn.Module):
         if self.kernel == 'rbf':
             self.kernel = lambda y1, y2: rbf_kernel(y1, y2, gamma=1./(2*self.sigma**2))
         elif self.kernel == "discrete":
-            self.kernel = GeneralizedSupervisedNTXenLoss.discrete_kernel
+            self.kernel = WeaklySupervisedNTXenLoss.discrete_kernel
         if self.kernel == 'cosine':
             self.kernel = lambda y1, y2: cosine_similarity(y1, y2)
         elif self.kernel == 'linear':

@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 
+"""
+    Network introduced in Peng et al., 2021 https://www.sciencedirect.com/science/article/pii/S1361841520302358
+    that has been re-implemented here. 
+"""
+
 class SFCN(nn.Module):
     def __init__(self, in_channels=1,
                  channel_number=[32, 64, 128, 256, 256, 64], output_dim=40, dropout=True):

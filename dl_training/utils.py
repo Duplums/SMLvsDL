@@ -18,6 +18,11 @@ import numpy as np
 def get_chk_name(name, fold, epoch):
     return "{name}_{fold}_epoch_{epoch}.pth".format(name=name or "model",fold=fold,epoch=epoch)
 
+def get_pickle_obj(path):
+    import pickle
+    with open(path, 'rb') as f:
+        obj = pickle.load(f)
+    return obj
 
 def checkpoint(model, epoch, fold, outdir, name=None, optimizer=None, scheduler=None,
                **kwargs):

@@ -1,16 +1,11 @@
 from dl_training.core import Base
-from datasets import ArrayDataset, DataItem, MultiModalDataset
-from datasets import OpenBHB, SubOpenBHB
+from datasets.open_bhb import OpenBHB, SubOpenBHB
 import torch
 from torch.utils.data import SequentialSampler
 from dl_training.augmentation import *
-from dl_training.transforms import Crop, HardNormalization
-import torchvision.transforms as transforms
-import bisect
+from dl_training.transforms import Crop
 from tqdm import tqdm
-from typing import Dict, List
 import numpy as np
-from itertools import compress
 
 
 class DA_Module(object):
@@ -54,7 +49,6 @@ class SimCLR(Base):
         z_j = self.model(inputs[:, 1, :].to(self.device))
         return z_i, z_j
 
-
     def update_metrics(self, values, nb_batch, logits=None, target=None, validation=False, **kwargs):
         if logits is not None and target is not None:
             for name, metric in self.metrics.items():
@@ -65,8 +59,7 @@ class SimCLR(Base):
                 values[name] += float(metric(logits, target)) / nb_batch
 
     def train(self, loader, visualizer=None, fold=None, epoch=None, **kwargs):
-        """ Train the model on the trained data.
-
+        """ Train the model on the dataloader provided
         Parameters
         ----------
         loader: a pytorch Dataloader
@@ -122,58 +115,6 @@ class SimCLR(Base):
 
         pbar.close()
         return loss, values
-
-    def features_avg_test(self, loader, M=10, **kwargs):
-        """ Evaluate the model at test time using the feature averaging strategy as described in
-        Improving Transformation Invariance in Contrastive Representation Learning, ICLR 2021, A. Foster
-
-        :param
-        loader: a pytorch Dataset
-            the data loader.
-        M: int, default 10
-            nb of times we sample t~T such that we transform a sample x -> z := f(t(x))
-        :returns
-            y: array-like dims (n_samples, M, ...) where ... is the dims of the network's output
-            the predicted data.
-            y_true: array-like dims (n_samples, M,  ...) where ... is the dims of the network's output
-            the true data
-        """
-        M = int(M)
-
-        assert M//2 == M/2.0, "Nb of feature vectors averaged should be odd"
-
-        if not isinstance(loader.sampler, SequentialSampler):
-            raise ValueError("The dataloader must use the sequential sampler (avoid random_sampler option)")
-
-        print(loader.dataset, flush=True)
-
-
-        self.model.eval()
-        nb_batch = len(loader)
-        pbar = tqdm(total=nb_batch*(M//2), desc="Mini-Batch")
-
-        with torch.no_grad():
-            y, y_true = [], []
-            for _ in range(M//2):
-                current_y, current_y_true = [[], []], []
-                for dataitem in loader:
-                    pbar.update()
-                    if dataitem.labels is not None:
-                        current_y_true.extend(dataitem.labels.cpu().detach().numpy())
-                    (z_i, z_j) = self.get_output_pairs(dataitem.inputs, **kwargs)
-                    current_y[0].extend(z_i.cpu().detach().numpy())
-                    current_y[1].extend(z_j.cpu().detach().numpy())
-                y.extend(current_y)
-                y_true.extend([current_y_true, current_y_true])
-            pbar.close()
-            # Final dim: y [M, n_samples, ...] and y_true [M, n_samples, ...]
-            # Sanity check
-            assert np.all(np.array(y_true)[0,:] == np.array(y_true)), "Wrong iteration order through the dataloader"
-            y = np.array(y).swapaxes(0, 1)
-            y_true = np.array(y_true).swapaxes(0, 1)
-
-        return y, y_true
-
 
     def test(self, loader, with_visuals=False, **kwargs):
         """ Evaluate the model on the validation data. The test is done in a usual way for a supervised task.

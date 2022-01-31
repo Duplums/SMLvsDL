@@ -4,7 +4,6 @@ We aim at giving learning curves of classical ML models on OpenBHB for:
 * VBM, Quasi-Raw and FSL pre-processing
 
 """
-
 import numpy as np
 import os, logging
 import nibabel
@@ -74,14 +73,12 @@ if __name__ == "__main__":
     parser.add_argument("--model", required=True, choices=["SVC", "LogisticRegression",
                                                            "ElasticNet", "RandomForestClassifier"])
     parser.add_argument("--pb", required=True, choices=["scz", "bipolar", "asd"])
-    #parser.add_argument("--N_train", type=int, required=True)... To be continued
     parser.add_argument("--njobs", default=1, type=int)
     parser.add_argument("--folds", nargs='+', type=int)
     parser.add_argument("--nb_folds", type=int, required=True)
     parser.add_argument("--no_reduc", action="store_true")
     parser.add_argument("--N_train", type=int)
     parser.add_argument("--scaler", default="standard", choices=["standard", "zscore", "none"])
-    parser.add_argument("--mask", default="reduced", choices=["std", "reduced"])
     parser.add_argument("--residualize", type=str, choices=["linear", "combat"])
     parser.add_argument("--post_norm", action="store_true")
     parser.add_argument("--nfeatures", type=int, default=784)
@@ -95,14 +92,14 @@ if __name__ == "__main__":
     saving_dir = args.saving_dir
 
     scoring = "balanced_accuracy"
-
-    if args.mask == "std":
-        masks = {"vbm": np.load(os.path.join(root, "mask_open-bhb_vbm.npy")),
-                 "quasi_raw": np.load(os.path.join(root, "mask_open-bhb_quasi_raw.npy"))}
-    else:
+    try:
         m_vbm = nibabel.load(os.path.join(args.root, "mni_cerebrum-gm-mask_1.5mm.nii.gz"))
         m_quasi_raw = nibabel.load(os.path.join(root, "mni_raw_brain-mask_1.5mm.nii.gz"))
-        masks = {"vbm": m_vbm.get_data() != 0, "quasi_raw": m_quasi_raw.get_data() != 0}
+    except FileNotFoundError:
+        raise FileNotFoundError("Brain masks not found. You can find them in /masks directory "
+                                "and mv them to this directory: %s" % args.root)
+
+    masks = {"vbm": m_vbm.get_data() != 0, "quasi_raw": m_quasi_raw.get_data() != 0}
 
     models = [SVC, LogisticRegression, RandomForestClassifier, SGDClassifier]
 
@@ -250,10 +247,9 @@ if __name__ == "__main__":
                 else:
                     saving_dir_ = os.path.join(saving_dir, preproc, model_name, "Dx", "N_%i"%N_train)
                 if args.test: train_data_ = None
-                X_tests = [test_intra_data_, test_data_] #if args.residualize != "combat" else [test_intra_data_]
-                y_tests = [y_test_intra, y_test] #if args.residualize != "combat" else [y_test_intra]
-                test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name] #if args.residualize != "combat" \
-                    #else ["%s_Intra"%args.test_name]
+                X_tests = [test_intra_data_, test_data_]
+                y_tests = [y_test_intra, y_test]
+                test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name]
                 trainer = MLTrainer(model(), deepcopy(hyperparams), train_data_, y_tr,
                                     X_val=val_data_, y_val=y_val,
                                     X_tests=X_tests,
@@ -282,10 +278,9 @@ if __name__ == "__main__":
                     else:
                         saving_dir_ = os.path.join(saving_dir, preproc, model_name, "Dx", meth, "N_%i"%N_train)
                     if args.test: train_red = None
-                    X_tests = [test_intra_red, test_red]# if args.residualize != "combat" else [test_intra_red]
-                    y_tests = [y_test_intra, y_test] #if args.residualize != "combat" else [y_test_intra]
-                    test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name]# if args.residualize != "combat" \
-                        #else ["%s_Intra"%args.test_name]
+                    X_tests = [test_intra_red, test_red]
+                    y_tests = [y_test_intra, y_test]
+                    test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name]
                     trainer = MLTrainer(model(), deepcopy(hyperparams), train_red, y_tr,
                                         X_val=val_red, y_val=y_val,
                                         X_tests=X_tests,

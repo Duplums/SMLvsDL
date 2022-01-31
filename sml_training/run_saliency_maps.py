@@ -20,13 +20,6 @@ from sml_training.saliency_maps import area_occlusion, sensitivity_analysis, \
 from sklearn.base import is_regressor, is_classifier
 from tqdm import tqdm
 
-## 1- Region importance for DL/ML models
-# Computes occlusion maps for DL/ML models
-
-## 2- Computes saliency maps with sensitivity analysis for DL (Gradient-Based)
-
-## 3- Computes saliency maps for an ensemble of models
-
 
 class ModelEnsemble(torch.nn.Module):
     def __init__(self, models, apply_softmax=True):
@@ -81,28 +74,21 @@ if __name__ == "__main__":
     parser.add_argument("--mask", default="reduced", choices=["none", "std", "reduced"])
     parser.add_argument("--scaler", default="standard", choices=["standard", "zscore"])
     parser.add_argument("--dl", action="store_true", help="Whether the testing model is Pytorch or sklearn-Like")
-    parser.add_argument("--chkpt", type=str, nargs='+', required=True, help="Checkpoint to load (as a .pkl)")
+    parser.add_argument("--chkpt", type=str, nargs='+', required=True, help="Checkpoint to load (as a .pkl or .pth)")
     args = parser.parse_args()
 
-    logger = logging.getLogger("dl_training")
+    logger = logging.getLogger("sml_training")
 
     root = args.root
     brain_atlas = (os.path.join(root, "AAL3v1_1mm.nii.gz"),
-                   os.path.join(root, "AAL3v1_for_SPM12/AAL3/AAL3v1_1mm.nii.txt"))
+                   os.path.join(root, "AAL3v1_1mm.nii.txt"))
     preproc = args.preproc
     pb = args.pb
     scaler = StandardScaler if args.scaler == "standard" else Zscore
 
     # Loads Mask (only for sklearn model)
-    masks = {"vbm": None, "quasi_raw": None}
-    if args.mask == "std":
-        masks = {"vbm": np.load(os.path.join(root, "mask_open-bhb_vbm.npy")),
-                 "quasi_raw": np.load(os.path.join(root, "mask_open-bhb_quasi_raw.npy"))}
-    elif args.mask == "reduced":
-        m = nibabel.load("/neurospin/tmp/psy_sbox/all_studies/derivatives/arrays/mni_cerebrum-gm-mask_1.5mm.nii.gz")
-        m = (m.get_fdata() != 0)
-        masks = {"vbm": m, "quasi_raw": m }
-    mask = masks[args.preproc]
+    mask = nibabel.load(os.path.join(root, "mni_cerebrum-gm-mask_1.5mm.nii.gz"))
+    mask = (mask.get_fdata() != 0)
 
     # Loads data
     if args.dl:
@@ -179,7 +165,7 @@ if __name__ == "__main__":
                     try:
                         saliency_imgs = sensitivity_analysis(model, X.inputs,
                                                              postprocess="abs",
-                                                             is_classif=False,#(args.pb != "age"),
+                                                             is_classif=(args.pb != "age"),
                                                              apply_softmax=False,
                                                              cuda=torch.cuda.is_available())
                     except ValueError:

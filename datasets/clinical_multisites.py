@@ -42,7 +42,7 @@ class ClinicalBase(ABC, Dataset):
                  load_data: bool=False):
         """
         :param root: str, path to the root directory containing the different .npy and .csv files
-        :param preproc: str, must be either VBM ('vbm'), Quasi-Raw ('quasi_raw') or FreeSurfer ('fs')
+        :param preproc: str, must be either VBM ('vbm'), Quasi-Raw ('quasi_raw')
         :param target: str or [str], either 'dx' or 'site'.
         :param split: str, either 'train', 'val', 'test' (inter) or (eventually) 'test_intra'
         :param transforms (callable, optional): A function/transform that takes in
@@ -52,7 +52,7 @@ class ClinicalBase(ABC, Dataset):
         """
         if isinstance(target, str):
             target = [target]
-        assert preproc in ['vbm', 'quasi_raw', 'fs'], "Unknown preproc: %s"%preproc
+        assert preproc in ['vbm', 'quasi_raw'], "Unknown preproc: %s"%preproc
         assert set(target) <= {'diagnosis', 'site'}, "Unknown target: %s"%target
         assert split in ['train', 'val', 'test', 'test_intra', 'validation'], "Unknown split: %s"%split
 
