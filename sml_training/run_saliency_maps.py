@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--chkpt", type=str, nargs='+', required=True, help="Checkpoint to load (as a .pkl or .pth)")
     args = parser.parse_args()
 
-    logger = logging.getLogger("sml_training")
+    logger = logging.getLogger("SMLvsDL")
 
     root = args.root
     brain_atlas = (os.path.join(root, "AAL3v1_1mm.nii.gz"),

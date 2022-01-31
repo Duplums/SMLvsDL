@@ -51,7 +51,7 @@ class OpenBHBDataManager:
         assert model in [None, "SimCLR", "base"], "Unknown model: %s"%model
         assert sampler in ["random", "sequential"], "Unknown sampler '%s'"%sampler
         assert residualize in [None, "linear", "combat"], "Unknown residualizer %s"%residualize
-        self.logger = logging.getLogger("dl_training")
+        self.logger = logging.getLogger("SMLvsDL")
         self.dataset = dict()
         self.labels = labels or []
         self.residualize = residualize
@@ -123,7 +123,7 @@ class OpenBHBDataManager:
 
     def fit_residualizer(self, splits=None, fold_index=0):
         """
-        :param splits: list of splits, must be a train, validation or test split the Residualizer will be applied on
+        :param splits: list of splits, must be a train, validation or tests split the Residualizer will be applied on
                 (required only for linear residualization)
         :param fold_index: the training fold index used to fit the Residualizer
         :return: a tuple (Residualizer, dict(split: design matrix for this split)
@@ -168,7 +168,7 @@ class OpenBHBDataManager:
                        test=False, test_intra=False, fold_index=None,
                        residualizer=None, Zres=None):
 
-        assert test + test_intra <= 1, "Only one test accepted"
+        assert test + test_intra <= 1, "Only one tests accepted"
         _test, _train, _validation, sampler = (None, None, None, None)
 
         tests_to_return = []
@@ -221,17 +221,18 @@ class OpenBHBDataManager:
 
 class BHBDataManager(OpenBHBDataManager):
 
-    def __init__(self, root: str, preproc: str, scheme: str, labels: List[str]=None, sampler: str="random",
+    def __init__(self, root: str, preproc: str, labels: List[str]=None, sampler: str="random",
                  batch_size: int=1, number_of_folds: int=None, N_train_max: int=None,
                  input_transforms: Callable[[np.ndarray], np.ndarray]=None, residualize: bool=False,
-                 mask = None, model:str=None, device:str="cuda", **dataloader_kwargs):
+                 mask = None, model:str=None, device:str="cuda", scheme: str="train_val_test",
+                 **dataloader_kwargs):
 
         assert model in [None, "base"], "Unknown model: %s"%model
         assert sampler in ["random", "sequential"], "Unknown sampler '%s'"%sampler
         assert scheme == "train_val_test", "Scheme %s not implemented yet"%scheme
         assert N_train_max is None, "Sub-sampling BHB not implemented yet"
 
-        self.logger = logging.getLogger("dl_training")
+        self.logger = logging.getLogger("SMLvsDL")
         self.dataset = dict()
         self.labels = labels or []
         self.residualize = residualize
@@ -273,7 +274,7 @@ class ClinicalDataManager(OpenBHBDataManager):
         assert sampler in ["random", "sequential"], "Unknown sampler '%s'"%sampler
         assert residualize in [None, "linear", "combat"], "Unkown residulalizer %s"%residualize
 
-        self.logger = logging.getLogger("dl_training")
+        self.logger = logging.getLogger("SMLvsDL")
         self.dataset = dict()
         self.labels = labels or []
         self.residualize = residualize

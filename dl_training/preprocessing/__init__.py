@@ -19,16 +19,12 @@ import nibabel
 from .intensity import rescale
 from .intensity import zscore_normalize
 from .intensity import kde_normalize
-from .spatial import reorient2std
-from .spatial import biasfield
-from .spatial import register
 from .spatial import padd
 from .spatial import downsample
-from .spatial import scale
 
 
 # Global parameters
-logger = logging.getLogger("dl_training")
+logger = logging.getLogger("SMLvsDL")
 
 
 class Processor(object):

@@ -327,7 +327,7 @@ class OpenBHB(Dataset):
         """
 
         assert operator in ['|', '&'], "Unknown operator: %s"%operator
-        assert preproc in ['vbm', 'quasi_raw', 'fs'], "Unknown preprocessing: %s"%preproc
+        assert preproc in ['vbm', 'quasi_raw'], "Unknown preprocessing: %s"%preproc
 
         d_train = OpenBHB(root, preproc=preproc, scheme="cv", split="train", fold=0)
         d_test = OpenBHB(root, preproc=preproc, scheme="cv", split="test", fold=0)
@@ -340,30 +340,6 @@ class OpenBHB(Dataset):
                 global_mask = op(global_mask, masking_fn(d[i][0]))
         return global_mask
 
-
-    @staticmethod
-    def compute_brain_mask(target_img, global_mask=None, tissue_prior="brain", mask_thres_mean=0.1,
-                       mask_thres_std=1e-6, clust_size_thres=None,
-                       rm_brainstem=False, rm_cerebellum=False,
-                       fsl_home="/usr/share/fsl", verbose=0):
-        """
-        for args meaning, refers to <nitk.image.img_brain_mask.compute_brain_mask>
-        quasi-raw mask obtained with:
-        >>> from json_config import ROOT_DATA
-        >>> implicit_mask = np.load(os.path.join(ROOT_DATA, "mask_open-bhb_quasi_raw.npy"))
-        >>> implicit_mask.shape
-        (1, 121, 145, 121)
-        >>> brain_mask = OpenBHB.compute_brain_mask("/neurospin/tmp/psy_sbox/all_studies/derivatives/arrays/mni_cerebrum-gm-mask_1.5mm.nii.gz", global_mask=implicit_mask[0], verbose=1)
-        pixdim[1,2,3] should be positive; setting to abs of pixdim values
-        Clusters of connected voxels #1, sizes= [629116]
-        """
-        import sys; sys.path.append("/home/bd261576/PycharmProjects/nitk")
-        from nitk.image.img_brain_mask import compute_brain_mask
-        return compute_brain_mask(target_img, implicitmask_arr=global_mask,
-                       tissue_prior=tissue_prior, mask_thres_mean=mask_thres_mean,
-                       mask_thres_std=mask_thres_std, clust_size_thres=clust_size_thres,
-                       rm_brainstem=rm_brainstem, rm_cerebellum=rm_cerebellum,
-                       fsl_home=fsl_home, verbose=verbose)
 
     def __getitem__(self, idx: int):
         if self._data_loaded is not None:

@@ -30,7 +30,7 @@ from .intensity import add_offset
 from .intensity import add_swap
 from torchvision.transforms import Compose, RandomHorizontalFlip
 # Global parameters
-logger = logging.getLogger("dl_training")
+logger = logging.getLogger("SMLvsDL")
 
 class Transformer(object):
     """ Class that can be used to register a sequence of transformations.

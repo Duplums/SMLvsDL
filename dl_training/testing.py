@@ -11,10 +11,10 @@ class BaseTester():
 
     def __init__(self, args):
         self.args = args
-        self.net = BaseTrainer.build_network(args.net, in_channels=1)
+        self.net = BaseTrainer.build_network(args.net, args.pb, in_channels=1)
         self.manager = BaseTrainer.build_data_manager(args)
         self.loss = BaseTrainer.build_loss(args)
-        self.logger = logging.getLogger("pynet")
+        self.logger = logging.getLogger("SMLvsDL")
         self.metrics = BaseTrainer.build_metrics(args.pb)
         self.kwargs_test = dict()
 
@@ -45,7 +45,7 @@ class BaseTester():
         return folds
 
     def get_epochs_to_test(self):
-        # Get the last point and test it, for each fold
+        # Get the last point and tests it, for each fold
         epochs_tested = [[self.args.nb_epochs - 1] for _ in range(self.args.nb_folds)]
 
         return epochs_tested
@@ -54,8 +54,8 @@ class BaseTester():
 class OpenBHBTester(BaseTester):
     """
     We perform 2 kind of tests:
-    * Test-Intra where we test on the left-out test set with intra-site images
-    * Test-Inter where we test on inter-site images (never-seen site)
+    * Test-Intra where we tests on the left-out tests set with intra-site images
+    * Test-Inter where we tests on inter-site images (never-seen site)
     """
     def run(self):
         epochs_tested = self.get_epochs_to_test()

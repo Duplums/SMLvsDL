@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
-##########################################################################
-# NSAp - Copyright (C) CEA, 2019
-# Distributed under the terms of the CeCILL-B license, as published by
-# the CEA-CNRS-INRIA. Refer to the LICENSE file or to
-# http://www.cecill.info/licences/Licence_CeCILL-B_V1-en.html
-# for details.
-##########################################################################
-
 """
 A module with common functions.
 """
 import os
 import torch
 import numpy as np
+import logging
+import warnings
 
+logger = logging.getLogger("SMLvsDL")
 
 def get_chk_name(name, fold, epoch):
     return "{name}_{fold}_epoch_{epoch}.pth".format(name=name or "model",fold=fold,epoch=epoch)
@@ -23,6 +18,44 @@ def get_pickle_obj(path):
     with open(path, 'rb') as f:
         obj = pickle.load(f)
     return obj
+
+def setup_logging(level="info", logfile=None):
+    """ Setup the logging.
+
+    Parameters
+    ----------
+    logfile: str, default None
+        the log file.
+    """
+    LEVELS = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+        "critical": logging.CRITICAL
+    }
+    logging_format = logging.Formatter(
+        "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - "
+        "%(message)s", "%Y-%m-%d %H:%M:%S")
+    while len(logging.root.handlers) > 0:
+        logging.root.removeHandler(logging.root.handlers[-1])
+    while len(logger.handlers) > 0:
+        logger.removeHandler(logger.handlers[-1])
+    level = LEVELS.get(level, None)
+    if level is None:
+        raise ValueError("Unknown logging level.")
+    logger.setLevel(level)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(logging_format)
+    logger.addHandler(stream_handler)
+    if logfile is not None:
+        file_handler = logging.FileHandler(logfile, mode="a")
+        file_handler.setLevel(level)
+        file_handler.setFormatter(logging_format)
+        logger.addHandler(file_handler)
+    if level != logging.DEBUG:
+        warnings.simplefilter("ignore", DeprecationWarning)
 
 def checkpoint(model, epoch, fold, outdir, name=None, optimizer=None, scheduler=None,
                **kwargs):

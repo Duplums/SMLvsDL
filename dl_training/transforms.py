@@ -1,12 +1,4 @@
 # -*- coding: utf-8 -*-
-##########################################################################
-# NSAp - Copyright (C) CEA, 2019
-# Distributed under the terms of the CeCILL-B license, as published by
-# the CEA-CNRS-INRIA. Refer to the LICENSE file or to
-# http://www.cecill.info/licences/Licence_CeCILL-B_V1-en.html
-# for details.
-##########################################################################
-
 """
 Module that defines common transformations that can be applied when the dataset
 is loaded.
@@ -127,7 +119,7 @@ class Random90_3DRot(object):
             self.num_classes = self.nb_rots
             self.cube_face = 2 * self.authorized_axes.index(axes)
 
-        # Small test to confirm that everything is ok (i.e the transformation T: label -> T(I) is injective
+        # Small tests to confirm that everything is ok (i.e the transformation T: label -> T(I) is injective
         # for any image I)
         self.test_unicity()
 

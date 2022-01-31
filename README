@@ -94,7 +94,7 @@ for clinical classification (patient vs control) and phenotype prediction (age r
 Both `clinical_sml.py` and `age_sex_sml.py` can be executed as followed from a bash terminal:
 
 ```
-python3 <script>.py --root <ROOT_DIR> --saving_dir <SAVE_DIR> --pb <PB> --preproc <PREPROC> --model <MODEL> --nb_folds 3
+python3 <script>.py --root <ROOT_DIR> --saving_dir <SAVE_DIR> --pb <PB> --preproc <PREPROC> --model <MODEL> --nb_folds 3 --N_train <N>
 ```
 
 where all parameters are described with a helper. 
@@ -136,10 +136,11 @@ CHK="."
 PREPROC="vbm"
 NET="densenet121" # can be also "resnet18" or "alexnet"
 PB="age" # can be "sex"
-N=9253 # in [100, 500, 1000, 3000, 5000, 9253] 
+# For N>5K, switch to BHB with N=9253 samples.
+N=9253 # in [100, 500, 1000, 3000, 5000, 9253]
 # Age prediction
 python3 dl_training/main.py --root $ROOT --checkpoint_dir $CHK --preproc $PREPROC \
---exp_name ${NET}_${PREPROC}_${PB}_N$N --pb $PB --N_train_max $N --nb_folds 3 --net $NET\
+--exp_name ${NET}_${PREPROC}_${PB}_N$N --pb $PB --N_train_max $N --nb_folds 3 --net $NET \
 --batch_size 32 --lr 1e-4 --gamma_scheduler 0.8 --sampler random --train --test
 ```
 
@@ -158,7 +159,7 @@ NET="densenet121" # can be also "resnet18" or "alexnet"
 PB="scz" # can be aslo "asd" or "bipolar"
 # Schizophrenia classification
 python3 dl_training/main.py --root $ROOT --checkpoint_dir $CHK --preproc $PREPROC \
---exp_name ${NET}_${PREPROC}_${PB} --pb $PB --nb_folds 3 --net $NET\
+--exp_name ${NET}_${PREPROC}_${PB} --pb $PB --nb_folds 3 --net $NET \
 --batch_size 32 --lr 1e-4 --gamma_scheduler 0.8 --sampler random --nb_epochs 100
 ```
 
@@ -183,7 +184,7 @@ NET="densenet121"
 PB="self_supervised"
 SIGMA=5
 python3 dl_training/main.py --root $ROOT --checkpoint_dir $CHK --preproc $PREPROC \
---exp_name ${NET}_${PREPROC}_${PB} --pb $PB --nb_folds 3 --net $NET --sigma $SIGMA\
+--exp_name ${NET}_${PREPROC}_${PB} --pb $PB --nb_folds 3 --net $NET --sigma $SIGMA \
 --batch_size 64 --lr 1e-4 --gamma_scheduler 0.8 --sampler random --nb_epochs 100  
 ```
 *Important Remark:* since OpenBHB contains part of ABIDE, the pre-trained DenseNet cannot be fine-tuned directly
@@ -200,9 +201,9 @@ NET="densenet121"
 PB="scz" # can also be "asd" or "bipolar"
 $PRETRAINING="${NET}_${PREPROC}_self_supervised_0_epoch_99.pth"
 python3 dl_training/main.py --root $ROOT --checkpoint_dir $CHK --preproc $PREPROC \
---exp_name ${NET}_${PREPROC}_${PB}_finetuned --pb $PB --nb_folds 3 --net $NET 
---sigma $SIGMA --batch_size 64 --lr 1e-4 --gamma_scheduler 0.8 --sampler random 
---nb_epochs 100 --pretrained_path ${PRETRAINING}$ 
+--exp_name ${NET}_${PREPROC}_${PB}_finetuned --pb $PB --nb_folds 3 --net $NET \
+--sigma $SIGMA --batch_size 64 --lr 1e-4 --gamma_scheduler 0.8 --sampler random \
+--nb_epochs 100 --pretrained_path ${PRETRAINING}$ --train --test
 ```
 
 ### Sensitivity Analysis and Model Occlusion

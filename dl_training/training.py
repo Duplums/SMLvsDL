@@ -6,14 +6,14 @@ from dl_training.models.densenet import *
 from dl_training.losses import *
 from dl_training.models.sfcn import SFCN
 from dl_training.models.alexnet import AlexNet3D_Dropout
-import re, nibabel, os
+import nibabel, os
 
 
 class BaseTrainer():
 
     def __init__(self, args):
         self.args = args
-        self.net = BaseTrainer.build_network(args.net, in_channels=1)
+        self.net = BaseTrainer.build_network(args.net, args.pb, in_channels=1)
         self.manager = BaseTrainer.build_data_manager(args)
         self.loss = BaseTrainer.build_loss(self.args)
         self.metrics = BaseTrainer.build_metrics(self.args.pb)
@@ -21,13 +21,12 @@ class BaseTrainer():
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=args.lr, weight_decay=5e-5)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, gamma=args.gamma_scheduler,
                                                          step_size=args.step_size_scheduler)
-        model_cls = SimCLR if args.pb =="self_supervision" else Base
+        model_cls = SimCLR if args.pb == "self_supervised" else Base
         self.kwargs_train = dict()
 
         self.model = model_cls(model=self.net,
                                metrics=self.metrics,
                                pretrained=args.pretrained_path,
-                               freeze_until_layer=args.freeze_until_layer,
                                load_optimizer=args.load_optimizer,
                                use_cuda=args.cuda,
                                loss=self.loss,
@@ -79,19 +78,29 @@ class BaseTrainer():
         return loss
 
     @staticmethod
-    def build_network(name, **kwargs):
+    def build_network(name, pb, **kwargs):
         num_classes = 1 # one output for BCE loss and L1 loss. Last layers removed for self-supervision
         if name == "resnet18":
-            net = resnet18(num_classes=num_classes, **kwargs)
+            if pb == "self_supervised":
+                net = resnet18(out_block="simCLR")
+            else:
+                net = resnet18(num_classes=num_classes, **kwargs)
         elif name == "sfcn":
-            net = SFCN(output_dim=num_classes, dropout=True, **kwargs)
-            logger.warning('By default, dropout=True for SFCN.')
+            if pb == "self_supervised":
+                raise NotImplementedError()
+            else:
+                net = SFCN(output_dim=num_classes, dropout=True, **kwargs)
+                logger.warning('By default, dropout=True for SFCN.')
         elif name == "densenet121":
-            net = densenet121(num_classes=num_classes, **kwargs)
-        elif name == 'densenet121_simCLR': # DenseNet121 used for self-supervision (with projection head)
-            net = densenet121(num_classes=num_classes, out_block="simCLR", **kwargs)
+            if pb == "self_supervised":
+                net = densenet121(num_classes=num_classes, out_block="simCLR", **kwargs)
+            else:
+                net = densenet121(num_classes=num_classes, **kwargs)
         elif name == "alexnet": # AlexNet 3D version derived from Abrol et al., 2021
-            net = AlexNet3D_Dropout(num_classes=num_classes)
+            if pb == "self_supervised":
+                raise NotImplementedError()
+            else:
+                net = AlexNet3D_Dropout(num_classes=num_classes)
         else:
             raise ValueError('Unknown network %s' % name)
 
@@ -122,6 +131,7 @@ class BaseTrainer():
             if args.N_train_max <= 5000:
                 _manager_cls = OpenBHBDataManager
             else:
+                args.N_train_max = None
                 _manager_cls = BHBDataManager
         elif args.pb == "self_supervised":
             _manager_cls = OpenBHBDataManager
@@ -134,11 +144,10 @@ class BaseTrainer():
                               num_workers=args.num_cpu_workers, pin_memory=True, drop_last=False)
 
         if args.pb in ["age", "sex", "self_supervised"]:
-            kwargs_manager["scheme"] = "train_val_test"
             kwargs_manager["model"] = "SimCLR" if args.pb == "self_supervised" else "base"
         elif args.pb in ["scz", "bipolar", "asd"]:
             kwargs_manager["db"] = args.pb
 
-        manager = _manager_cls(args.root_data, preproc, **kwargs_manager)
+        manager = _manager_cls(args.root, preproc, **kwargs_manager)
 
         return manager

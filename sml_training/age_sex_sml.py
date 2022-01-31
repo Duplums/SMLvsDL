@@ -28,7 +28,7 @@ from sklearn.preprocessing import StandardScaler
 # nb_training_samples = [100, 500, 1000, 3000, 5000]
 # total_nb_folds = [5, 5, 3, 3, 3]
 
-logger = logging.getLogger("dl_training")
+logger = logging.getLogger("SMLvsDL")
 
 def red_dim(X_tr, y_tr, *X_tests, meth, classif=True, nFeats=784, post_norm=False):
     X_tests_ = []
@@ -77,7 +77,7 @@ def residualize(formula_res: str, formula_full: str, df: pd.DataFrame, train_dat
     :param train_data: numpy array of shape (n, *)
     :param tests: tuple (df_test, data_test) to be transformed
     :param type: str either "linear" for lin. reg. adjusted or "combat"
-    NOTE: Only the "res" values are used to residualize test data (e.g only "site")
+    NOTE: Only the "res" values are used to residualize tests data (e.g only "site")
     """
     assert type in ["linear", "combat"], "Unknown residualizer: %s"%type
     all_df = [df]
@@ -178,7 +178,7 @@ if __name__ == "__main__":
                           }
 
     dbs = {"train_val_test": "OpenBHB-Train-Val-Test", "cv": "OpenBHB-CV"}
-    logger = logging.getLogger("dl_training")
+    logger = logging.getLogger("SMLvsDL")
 
     red_methods = args.red_meth or ["UFS", "RFE", "GRP"]
 
@@ -292,13 +292,13 @@ if __name__ == "__main__":
                 save_model = True
                 if (issubclass(model, SVR) or issubclass(model, SVC)) and args.N_train > 6000:
                     save_model = False # too much memory
-                X_tests = [test_intra_data_, test_data_]
-                y_tests = [y_test_intra, y_test]
+                X_test = [test_intra_data_, test_data_]
+                y_test = [y_test_intra, y_test]
                 test_names = ["%s_Intra-OpenBHB"%args.test_name, "%s_OpenBHB"%args.test_name]
                 trainer = MLTrainer(model(), deepcopy(hyperparams), train_data_, y_tr,
                                     X_val=val_data_, y_val=y_val,
-                                    X_tests=X_tests,
-                                    y_tests=y_tests,
+                                    X_test=X_test,
+                                    y_test=y_test,
                                     test_names=test_names,
                                     exp_name=exp_name, saving_dir=saving_dir_, save_model=save_model,
                                     scoring=scoring, n_jobs=5, logger=logger)
@@ -315,13 +315,13 @@ if __name__ == "__main__":
                     if args.test: train_red = None
                     saving_dir_ = os.path.join(saving_dir, preproc, model_name, pb.capitalize(), meth,
                                                'N_%i' % args.N_train)
-                    X_tests = [test_intra_red, test_red]
-                    y_tests = [y_test_intra, y_test]
+                    X_test = [test_intra_red, test_red]
+                    y_test = [y_test_intra, y_test]
                     test_names = ["%s_Intra-OpenBHB"%args.test_name, "%s_OpenBHB"%args.test_name]
                     trainer = MLTrainer(model(), deepcopy(hyperparams), train_red, y_tr,
                                         X_val=val_red, y_val=y_val,
-                                        X_tests=X_tests,
-                                        y_tests=y_tests,
+                                        X_test=X_test,
+                                        y_test=y_test,
                                         test_names=test_names,
                                         exp_name=exp_name, saving_dir=saving_dir_,
                                         scoring=scoring, n_jobs=5, logger=logger)

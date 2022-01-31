@@ -1,13 +1,12 @@
 import argparse
-from dl_training.metrics import METRICS
 from dl_training.training import BaseTrainer
-from dl_training.testing import BaseTester, EnsemblingTester, OpenBHBTester
+from dl_training.testing import OpenBHBTester
 import torch
 import logging
 
 if __name__=="__main__":
 
-    logger = logging.getLogger("pynet")
+    logger = logging.getLogger("SMLvsDL")
 
     parser = argparse.ArgumentParser()
 
@@ -56,13 +55,11 @@ if __name__=="__main__":
                                                                       "optimizer's weigth")
 
     # This code can be executed on CPU or GPU
-    parser.add_argument("--cuda", type=bool, default=True, helper="If True, executes the code on GPU")
+    parser.add_argument("--cuda", type=bool, default=True, help="If True, executes the code on GPU")
 
     # Kind of tests
     parser.add_argument("--train", action="store_true")
-    parser.add_argument("--test", choices=['basic', 'cv', 'open_bhb', 'robustness', 'ssim', 'MC',
-                                           'ensemble', 'nn_repr', 'simclr'],
-                        help="What kind of test it will perform.")
+    parser.add_argument("--test", action="store_true")
 
     args = parser.parse_args()
 
@@ -83,11 +80,7 @@ if __name__=="__main__":
         # do not consider the pretrained path anymore since it will be eventually computed automatically
         args.pretrained_path = None
 
-    if args.test == 'basic':
-        tester = BaseTester(args)
-        tester.run()
-
-    if args.test == "open_bhb":
+    if args.test:
         tester = OpenBHBTester(args)
         tester.run()
 

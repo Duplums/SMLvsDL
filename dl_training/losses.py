@@ -17,7 +17,7 @@ from sklearn.metrics import pairwise_distances
 import numpy as np
 
 # Global parameters
-logger = logging.getLogger("dl_training")
+logger = logging.getLogger("SMLvsDL")
 
 class WeaklySupervisedNTXenLoss(nn.Module):
     """

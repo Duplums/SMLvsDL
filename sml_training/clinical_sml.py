@@ -25,7 +25,7 @@ from sklearn.preprocessing import StandardScaler
 # nb_training_samples = [100, 500, 1000, 3000, 5000]
 # total_nb_folds = [5, 5, 3, 3, 3]
 
-logger = logging.getLogger("sml_training")
+logger = logging.getLogger("SMLvsDL")
 
 def red_dim(X_tr, y_tr, *X_tests, meth, classif=True, nFeats=784, post_norm=False):
     X_tests_ = []
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         "asd": ASDDataset if N_train is None else SubASDDataset
     }
 
-    logger = logging.getLogger("dl_training")
+    logger = logging.getLogger("SMLvsDL")
 
     red_methods = args.red_meth or ["UFS", "RFE", "GRP"]
 
@@ -247,13 +247,13 @@ if __name__ == "__main__":
                 else:
                     saving_dir_ = os.path.join(saving_dir, preproc, model_name, "Dx", "N_%i"%N_train)
                 if args.test: train_data_ = None
-                X_tests = [test_intra_data_, test_data_]
-                y_tests = [y_test_intra, y_test]
+                X_test = [test_intra_data_, test_data_]
+                y_test = [y_test_intra, y_test]
                 test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name]
                 trainer = MLTrainer(model(), deepcopy(hyperparams), train_data_, y_tr,
                                     X_val=val_data_, y_val=y_val,
-                                    X_tests=X_tests,
-                                    y_tests=y_tests,
+                                    X_test=X_test,
+                                    y_test=y_test,
                                     test_names=test_names,
                                     exp_name=exp_name, saving_dir=saving_dir_, save_model=True,
                                     scoring=scoring, n_jobs=5, logger=logger)
@@ -278,13 +278,13 @@ if __name__ == "__main__":
                     else:
                         saving_dir_ = os.path.join(saving_dir, preproc, model_name, "Dx", meth, "N_%i"%N_train)
                     if args.test: train_red = None
-                    X_tests = [test_intra_red, test_red]
-                    y_tests = [y_test_intra, y_test]
+                    X_test = [test_intra_red, test_red]
+                    y_test = [y_test_intra, y_test]
                     test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name]
                     trainer = MLTrainer(model(), deepcopy(hyperparams), train_red, y_tr,
                                         X_val=val_red, y_val=y_val,
-                                        X_tests=X_tests,
-                                        y_tests=y_tests,
+                                        X_test=X_test,
+                                        y_test=y_test,
                                         test_names=test_names,
                                         exp_name=exp_name, saving_dir=saving_dir_,
                                         scoring=scoring, n_jobs=5, logger=logger)

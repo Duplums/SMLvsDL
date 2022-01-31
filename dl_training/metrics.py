@@ -25,7 +25,7 @@ from sklearn.metrics import roc_auc_score, balanced_accuracy_score, confusion_ma
 from scipy.special import expit
 
 # Global parameters
-logger = logging.getLogger("pynet")
+logger = logging.getLogger("SMLvsDL")
 
 def get_confusion_matrix(y_pred, y):
     y_pred = y_pred.data.max(dim=1)[1]
@@ -156,10 +156,10 @@ def get_binary_classification_metrics(path: str, epochs_tested: Sequence[int], f
                                       mask=None) -> Dict[str, List[float]]:
     """
     :param path: file path with convention r".*{fold}.*{epoch}.*"
-    :param epochs_tested: list of epochs to test
-    :param folds_tested: list of matching folds to test (same len as epoch)
+    :param epochs_tested: list of epochs to tests
+    :param folds_tested: list of matching folds to tests (same len as epoch)
     :param MCTest: whether we performed pynet <MCTest> (several forward passes for same x)
-    :param Ensembling: whether we performed ensembling test
+    :param Ensembling: whether we performed ensembling tests
     :param normalize: if True, apply sigmoid function to predictions
     :param y_pred_key: name of the key to look for in the loading dict
     :param softmax_applied: if True, we assume each prediction is formatted as [p(y=0), p(y=1)] (results of softmax).

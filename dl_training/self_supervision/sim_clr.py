@@ -58,7 +58,7 @@ class SimCLR(Base):
                     values[name] = 0
                 values[name] += float(metric(logits, target)) / nb_batch
 
-    def train(self, loader, visualizer=None, fold=None, epoch=None, **kwargs):
+    def train(self, loader, fold=None, epoch=None, **kwargs):
         """ Train the model on the dataloader provided
         Parameters
         ----------
@@ -77,8 +77,6 @@ class SimCLR(Base):
         pbar = tqdm(total=nb_batch, desc="Mini-Batch")
 
         values = {}
-        iteration = 0
-
         losses = []
         for dataitem in loader:
             pbar.update()
@@ -101,14 +99,6 @@ class SimCLR(Base):
                 values[name] += float(aux_loss) / nb_batch
 
             losses.append(float(batch_loss))
-            if iteration % 40 == 0:
-                if visualizer is not None:
-                    visualizer.refresh_current_metrics()
-                    if hasattr(self.model, "get_current_visuals"):
-                        visuals = self.model.get_current_visuals()
-                        visualizer.display_images(visuals, ncols=3)
-            iteration += 1
-
             self.update_metrics(values, nb_batch, *args, **kwargs)
 
         loss = np.mean(losses)
@@ -117,7 +107,7 @@ class SimCLR(Base):
         return loss, values
 
     def test(self, loader, with_visuals=False, **kwargs):
-        """ Evaluate the model on the validation data. The test is done in a usual way for a supervised task.
+        """ Evaluate the model on the validation data. The tests is done in a usual way for a supervised task.
 
         Parameter
         ---------

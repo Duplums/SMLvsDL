@@ -61,7 +61,7 @@ class ClinicalBase(ABC, Dataset):
         self.split = split
         self.target_name = target
         self.transforms = transforms
-        self.logger = logging.getLogger("pynet")
+        self.logger = logging.getLogger("SMLvsDL")
 
         if self.split == "val": self.split = "validation"
 

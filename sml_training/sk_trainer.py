@@ -22,9 +22,9 @@ class OpenBHBMLTrainer(Thread):
         :param exp_name: str, the results will be saved in <exp_name>
         :param saving_dir: str, path to the results (if it does not exist, it is created)
         :param scoring: scoring fn to give to scikit-learn <GridSearchCV> to perform grid-search
-        :param scaler: a scikit-learn Scaler to transform train/test data
+        :param scaler: a scikit-learn Scaler to transform train/tests data
         :param n_jobs: number of jobs to perform grid-search over set of hyper-parameters
-        :param logger: python Logger to use to write the training/test results (convenient for debugging)
+        :param logger: python Logger to use to write the training/tests results (convenient for debugging)
         """
         super().__init__(**kwargs)
 
@@ -71,7 +71,7 @@ class OpenBHBMLTrainer(Thread):
             X_test = self.scaler.fit_transform(X_test)
         y_pred = self.model_cv.predict(X_test)
 
-        # Reports the results on test
+        # Reports the results on tests
         if self.logger is not None:
             exp = os.path.join(self.saving_dir or '', self.exp_name or '{} {}'.format(self.model.__str__,
                                                                                       self.test_dataset.__str__))
@@ -95,7 +95,7 @@ class OpenBHBMLTrainer(Thread):
 
 class MLTester(Thread):
     """
-       A convenient worker specially adapted to test ML on OpenBHB with scikit-learn. It can be executed in
+       A convenient worker specially adapted to tests ML on OpenBHB with scikit-learn. It can be executed in
        standalone fashion. The methods start()/join() must be favored to run the worker.
        """
 
@@ -108,8 +108,8 @@ class MLTester(Thread):
         :param exp_name: str, the results will be saved in <exp_name>
         :param saving_dir: str, path to the results (if it does not exist, it is created)
         :param scoring: scoring fn to give to scikit-learn <GridSearchCV> to perform grid-search
-        :param scaler: a scikit-learn Scaler to transform test data
-        :param logger: python Logger to use to write the training/test results (convenient for debugging)
+        :param scaler: a scikit-learn Scaler to transform tests data
+        :param logger: python Logger to use to write the training/tests results (convenient for debugging)
         """
         super().__init__(**kwargs)
 
@@ -128,7 +128,7 @@ class MLTester(Thread):
             X_test = self.scaler.fit_transform(X_test)
         y_pred = self.model.predict(X_test)
 
-        # Reports the results on test
+        # Reports the results on tests
         if self.logger is not None:
             exp = os.path.join(self.saving_dir or '', self.exp_name or '{}'.format(self.model.__str__))
             self.logger.info("{}: Best score on Test: {}".format(exp, self.model.score(X_test, y_test)))
@@ -152,7 +152,7 @@ class MLTrainer(Thread):
     A convenient worker specially adapted to perform ML with scikit-learn. It can be executed in
     standalone fashion. The methods start()/join() must be favored to run the worker.
     """
-    def __init__(self, model, hyperparams, X_train, y_train, X_val=None, y_val=None, X_tests=None, y_tests=None,
+    def __init__(self, model, hyperparams, X_train, y_train, X_val=None, y_val=None, X_test=None, y_test=None,
                  test_names=None, exp_name=None, saving_dir=None, save_model=True, scoring=None, n_jobs=1,
                  logger=None, **kwargs):
         """
@@ -161,10 +161,10 @@ class MLTrainer(Thread):
                 scikit-learn
         :param X_train: np.array for training. If None, it will try to load the last checkpoint and eventually test the
                 model.
-        :param X_tests (optional): list of testing np.array
-        :param y_tests (optional): list of testing np.array target labels
+        :param X_test (optional): list of testing np.array
+        :param y_test (optional): list of testing np.array target labels
         :param test_names (Optional): list of str to be concatenated to <exp_name> for dumping testing results.
-                We assume len(test_names) == len(X_tests)
+                We assume len(test_names) == len(X_test)
         :param exp_name: str, the results will be saved in <exp_name>
         :param saving_dir: str, path to the results (if it does not exist, it is created)
         :param save_model: boolean, whether the sklearn model is saved after training or not
@@ -182,7 +182,7 @@ class MLTrainer(Thread):
         self.scoring = scoring
         self.X_train, self.y_train = X_train, y_train
         self.X_val, self.y_val = X_val, y_val
-        self.X_tests, self.y_tests = X_tests, y_tests
+        self.X_test, self.y_test = X_test, y_test
         self.test_names = test_names
         self.n_jobs = n_jobs
         self.save_model = save_model
@@ -199,10 +199,10 @@ class MLTrainer(Thread):
 
         assert (is_classifier(model) or is_regressor(model)), "Model must be a scikit-learn classifier or regressor"
 
-        if X_tests is not None:
-            assert y_tests is not None and test_names is not None, "<y_test> and <test_names> must be filled !"
-            assert len(y_tests) == len(X_tests) == len(test_names)
-            for (X_test, y_test) in zip(X_tests, y_tests):
+        if X_test is not None:
+            assert y_test is not None and test_names is not None, "<y_test> and <test_names> must be filled !"
+            assert len(y_test) == len(X_test) == len(test_names)
+            for (X_test, y_test) in zip(X_test, y_test):
                 assert len(X_test) == len(y_test), "Incorrect dimension for X_test or y_test ({} != {})".\
                     format(X_test.shape, np.array(y_test).shape)
         if X_val is not None:
@@ -243,8 +243,8 @@ class MLTrainer(Thread):
         if self.last_checkpoint is None and self.save_model:
             MLTrainer.save({'model': self.model_cv}, file_name)
 
-        if self.X_tests is not None:
-            for (X_test, y_test, test_name) in zip(self.X_tests, self.y_tests, self.test_names):
+        if self.X_test is not None:
+            for (X_test, y_test, test_name) in zip(self.X_test, self.y_test, self.test_names):
                 y_pred = self.model_cv.predict(X_test)
                 kwargs = dict()
                 try:

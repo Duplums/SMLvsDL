@@ -29,7 +29,7 @@ from dl_training.history import History
 import dl_training.metrics as mmetrics
 import logging
 
-class Base:
+class Base(object):
     """ Class to perform classification.
     """
     def __init__(self, optimizer_name="Adam", learning_rate=1e-3,
@@ -55,7 +55,7 @@ class Base:
         metrics: list of str
             a list of extra metrics that will be computed.
         use_cuda: bool, default False
-            wether to use GPU or CPU.
+            whether to use GPU or CPU.
         pretrained: path, default None
             path to the pretrained model or weights.
         load_optimizer: boolean, default True
@@ -66,10 +66,8 @@ class Base:
             specify directly a custom 'model', 'optimizer' or 'loss'. Can also
             be used to set specific optimizer parameters.
         """
-        super().__init__(
-            signals=["before_epoch", "after_epoch", "after_iteration"])
         self.optimizer = kwargs.get("optimizer")
-        self.logger = logging.getLogger("dl_training")
+        self.logger = logging.getLogger("SMLvsDL")
         self.loss = kwargs.get("loss")
         self.device = torch.device("cuda" if use_cuda else "cpu")
         for name in ("optimizer", "loss"):
@@ -145,8 +143,7 @@ class Base:
 
     def training(self, manager, nb_epochs: int, checkpointdir=None,
                  fold_index=None, scheduler=None, with_validation=True,
-                 nb_epochs_per_saving=1, exp_name=None, standard_optim=True,
-                 gpu_time_profiling=False, **kwargs_train):
+                 nb_epochs_per_saving=1, exp_name=None, **kwargs_train):
         """ Train the model.
 
         Parameters
@@ -336,7 +333,7 @@ class Base:
         return y, X, y_true, loss, values
 
     def test(self, loader):
-        """ Evaluate the model on the test or validation data.
+        """ Evaluate the model on the tests or validation data.
 
         Parameter
         ---------
