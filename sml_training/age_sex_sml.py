@@ -315,13 +315,11 @@ if __name__ == "__main__":
                     if args.test: train_red = None
                     saving_dir_ = os.path.join(saving_dir, preproc, model_name, pb.capitalize(), meth,
                                                'N_%i' % args.N_train)
-                    X_test = [test_intra_red, test_red]
-                    y_test = [y_test_intra, y_test]
                     test_names = ["%s_Intra-OpenBHB"%args.test_name, "%s_OpenBHB"%args.test_name]
                     trainer = MLTrainer(model(), deepcopy(hyperparams), train_red, y_tr,
                                         X_val=val_red, y_val=y_val,
-                                        X_test=X_test,
-                                        y_test=y_test,
+                                        X_test=[test_intra_red, test_red],
+                                        y_test=[y_test_intra, y_test],
                                         test_names=test_names,
                                         exp_name=exp_name, saving_dir=saving_dir_,
                                         scoring=scoring, n_jobs=5, logger=logger)
