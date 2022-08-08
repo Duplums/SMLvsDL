@@ -27,7 +27,7 @@ from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger("SMLvsDL")
 
-def red_dim(X_tr, y_tr, *X_tests, meth, classif=True, nFeats=784, post_norm=False):
+def red_dim(X_tr, y_tr, X_tests, meth, classif=True, nFeats=784, post_norm=False):
     X_tests_ = []
     if meth == 'UFS':
         # 1. UFS
