@@ -27,7 +27,7 @@ from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger("SMLvsDL")
 
-def red_dim(X_tr, y_tr, *X_tests, meth, classif=True, nFeats=784, post_norm=False):
+def red_dim(X_tr, y_tr, X_tests, meth, classif=True, nFeats=784, post_norm=False):
     X_tests_ = []
     if meth == 'UFS':
         # 1. UFS
@@ -247,13 +247,11 @@ if __name__ == "__main__":
                 else:
                     saving_dir_ = os.path.join(saving_dir, preproc, model_name, "Dx", "N_%i"%N_train)
                 if args.test: train_data_ = None
-                X_test = [test_intra_data_, test_data_]
-                y_test = [y_test_intra, y_test]
                 test_names = ["%s_Intra"%args.test_name, "%s"%args.test_name]
                 trainer = MLTrainer(model(), deepcopy(hyperparams), train_data_, y_tr,
                                     X_val=val_data_, y_val=y_val,
-                                    X_test=X_test,
-                                    y_test=y_test,
+                                    X_test=[test_intra_data_, test_data_],
+                                    y_test=[y_test_intra, y_test],
                                     test_names=test_names,
                                     exp_name=exp_name, saving_dir=saving_dir_, save_model=True,
                                     scoring=scoring, n_jobs=5, logger=logger)
