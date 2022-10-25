@@ -294,7 +294,7 @@ class ClinicalDataManager(OpenBHBDataManager):
         # Linear Adj. (on site) residualization attributes
         self.formula_res, self.formula_full = "site + age + sex", "site + age + sex + diagnosis"
 
-        input_transforms = self.get_input_transforms(preproc, model)
+        input_transforms = self.get_input_transforms(preproc, model="")
 
         dataset_cls = None
         if db == "scz":
