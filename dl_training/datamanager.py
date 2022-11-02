@@ -64,7 +64,8 @@ class OpenBHBDataManager:
         scheme = "train_val_test"
         self.scheme = scheme
 
-        input_transforms = self.get_input_transforms(preproc, model)
+        input_transforms = self.get_input_transforms(preproc)
+                
         if N_train_max is not None:
             self.logger.info("Automatic stratification on Age+Sex+Site")
             dataset_cls = SubOpenBHB if model != "SimCLR" else SimCLRSubOpenBHB
@@ -209,7 +210,7 @@ class OpenBHBDataManager:
         return SetItem(train=_train, **test_loaders)
 
     @staticmethod
-    def get_input_transforms(preproc, model):
+    def get_input_transforms(preproc, model = None):
         if preproc in ["vbm", "quasi_raw"]:
             # Input size 121 x 145 x 121
             input_transforms = Compose([Crop((1, 121, 128, 121)), Padding([1, 128, 128, 128], mode='constant'),  Normalize()])
@@ -294,7 +295,7 @@ class ClinicalDataManager(OpenBHBDataManager):
         # Linear Adj. (on site) residualization attributes
         self.formula_res, self.formula_full = "site + age + sex", "site + age + sex + diagnosis"
 
-        input_transforms = self.get_input_transforms(preproc, model)
+        input_transforms = self.get_input_transforms(preproc)
 
         dataset_cls = None
         if db == "scz":
