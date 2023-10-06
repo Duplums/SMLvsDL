@@ -260,14 +260,14 @@ if __name__ == "__main__":
             else:
                 for meth in red_methods:
                     if args.residualize != "combat":
-                        train_red, (val_red, test_red, test_intra_red) = red_dim(train_data_, y_tr, val_data_,
-                                                                                 test_data_, test_intra_data_, meth=meth,
+                        train_red, (val_red, test_red, test_intra_red) = red_dim(train_data_, y_tr, [val_data_,
+                                                                                 test_data_, test_intra_data_], meth=meth,
                                                                                  classif=True,
                                                                                  post_norm=post_norm,
                                                                                  nFeats=args.nfeatures)
                     else:
-                        train_red, (val_red, test_red, test_intra_red) = red_dim(train_data_, y_tr, val_data_,
-                                                                       test_data_, test_intra_data_, meth=meth,
+                        train_red, (val_red, test_red, test_intra_red) = red_dim(train_data_, y_tr, [val_data_,
+                                                                       test_data_, test_intra_data_], meth=meth,
                                                                        classif=True,
                                                                        post_norm=post_norm,
                                                                        nFeats=args.nfeatures)
