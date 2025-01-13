@@ -1,0 +1,6 @@
+tests/tests.sh
+datasets/__pycache__
+dl_training/__pycache__
+masks/__pycache__
+sml_training/__pycache__
+.idea

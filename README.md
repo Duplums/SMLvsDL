@@ -1,6 +1,6 @@
 ## Objective 
 
-This library aims at reproducing results described in "Deep Learning Improvement over Standard Machine Learning in Anatomical Neuroimaging comes from Transfer Learning", Under Review
+This library aims at reproducing results described in "Exploring the potential of representation and transfer learning for anatomical neuroimaging: Application to psychiatry", NeuroImage 2024
 
 It contains the main scripts to run the different experiments with 1) Standard Machine Learning (SML) models including kernel-SVM and 
 regularized linear models (Logistic Regression with l1 and ElasticNet); 2) CNN models including 3D-AlexNet, 3D-ResNet and 3D-DenseNet.
@@ -224,3 +224,17 @@ python3 sml_training/run_saliency_maps.py --root $ROOT --saving_dir $DIR --prepr
 
 In the end, this dumps a pickle file containing a dictionary with normalized relevance score computed for each brain region and 
 each testing sample. 
+
+## Citation
+
+If you use this code in your research, please cite:
+
+@article{dufumier2024,
+  title={Exploring the potential of representation and transfer learning for anatomical neuroimaging: application to psychiatry},
+  author={Dufumier, Benoit and Gori, Pietro and Petiton, Sara and Louiset, Robin and Mangin, Jean-François and Grigis, Antoine and Duchesnay, Edouard},
+  journal={NeuroImage},
+  pages={120665},
+  year={2024},
+  publisher={Elsevier}
+}
+
